@@ -4,6 +4,30 @@ import click
 import libvirt
 import os
 
+from lxml import etree
+
+nsmap = {
+    'nova': 'http://openstack.org/xmlns/libvirt/nova/1.0',
+    'libosinfo': 'http://libosinfo.org/xmlns/libvirt/domain/1.0',
+}
+xml_label_map = {
+    'nova_user_name': '/domain/metadata/nova:instance/nova:owner/nova:user/text()',
+    'nova_user_uuid': '/domain/metadata/nova:instance/nova:owner/nova:user/@uuid',
+    'nova_project_name': '/domain/metadata/nova:instance/nova:owner/nova:project/text()',
+    'nova_project_uuid': '/domain/metadata/nova:instance/nova:owner/nova:project/@uuid',
+    'nova_flavor': '/domain/metadata/nova:instance/nova:flavor/@name',
+}
+
+
+def domxml_to_labels(dom):
+    labels = {}
+    doc = etree.fromstring(dom.XMLDesc())
+    for label, path in xml_label_map.items():
+        v = doc.xpath(path, namespaces=nsmap)
+        if v:
+            labels[label] = v[0]
+    return labels
+
 
 def bundle_to_metrics(bundle):
     metrics = []
@@ -21,7 +45,7 @@ def bundle_to_metrics(bundle):
     return metrics
 
 
-def parse_dom_stats(stats):
+def domstats_to_metrics(stats):
     newstats = []
     cur_bundle = (None, None, None)
 
@@ -49,11 +73,15 @@ def parse_dom_stats(stats):
 
 @click.command()
 @click.option('-c', '--connect', 'libvirt_uri')
-def main(libvirt_uri):
+@click.option('-l', '--label', 'labels', multiple=True, default=[])
+def main(libvirt_uri, labels):
     node = os.uname()
     host_labels = {
         'host': node[1],
     }
+
+    for label in labels:
+        host_labels.update(dict([label.split('=')]))
 
     c = libvirt.open(libvirt_uri)
     all_stats = c.getAllDomainStats()
@@ -64,8 +92,9 @@ def main(libvirt_uri):
             domain=dom.name(),
             uuid=dom.UUIDString()
         )
+        dom_labels.update(domxml_to_labels(dom))
 
-        metrics = parse_dom_stats(stats)
+        metrics = domstats_to_metrics(stats)
         metrics.append(('active', {}, 1))
         for metric in metrics:
             labels = metric[1]
