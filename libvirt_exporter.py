@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import click
 import libvirt
-import os
 
 from lxml import etree
 
@@ -75,11 +74,7 @@ def domstats_to_metrics(stats):
 @click.option('-c', '--connect', 'libvirt_uri')
 @click.option('-l', '--label', 'labels', multiple=True, default=[])
 def main(libvirt_uri, labels):
-    node = os.uname()
-    host_labels = {
-        'host': node[1],
-    }
-
+    host_labels = {}
     for label in labels:
         host_labels.update(dict([label.split('=')]))
 
@@ -88,18 +83,18 @@ def main(libvirt_uri, labels):
     active_stats = [x for x in all_stats if x[0].isActive()]
 
     for dom, stats in active_stats:
+        metrics = domstats_to_metrics(stats)
+
         dom_labels = dict(
             domain=dom.name(),
             uuid=dom.UUIDString()
         )
-        dom_labels.update(domxml_to_labels(dom))
 
-        metrics = domstats_to_metrics(stats)
-        metrics.append(('active', {}, 1))
+        dom_labels.update(domxml_to_labels(dom))
+        metrics.append(('active', dom_labels, 1))
+
         for metric in metrics:
             labels = metric[1]
-            labels.update(host_labels)
-            labels.update(dom_labels)
             label_string = ','.join('{}="{}"'.format(k, v)
                                     for k, v in labels.items())
             print('libvirt_{} {{{}}} {}'.format(
