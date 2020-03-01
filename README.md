@@ -8,7 +8,7 @@ Exports domain statistics for scraping by prometheus.
 Usage: libvirt-exporter [OPTIONS]
 
 Options:
-  -c, --uri TEXT
+  -u, --uri TEXT
   -l, --listen TEXT
   -p, --port INTEGER
   -x, --labels-from-xml PATH
