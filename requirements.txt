@@ -1,0 +1,4 @@
+click
+lxml
+prometheus_client
+pyyaml
