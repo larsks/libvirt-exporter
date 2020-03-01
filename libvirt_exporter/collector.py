@@ -30,46 +30,48 @@ class BundledMetrics(object):
         name = '.'.join([ns] + subkey)
         self.metrics[ns][index][name] = val
 
+    def generate_unit_metrics(self, uuid, ns, unit, stats):
+        name_attr = '{}.name'.format(ns)
+
+        labels = {
+            'uuid': uuid,
+            'unit': str(unit),
+            'name': stats.get(name_attr, 'unit{}'.format(unit))
+        }
+
+        yield InfoMetricFamily(
+            'libvirt_{}'.format(ns),
+            'information about {ns} {unit}'.format(
+                ns=ns,
+                unit=labels['unit'],
+            ),
+            value=labels
+        )
+
+        for name, val in stats.items():
+            if name == name_attr:
+                continue
+
+            if not isinstance(val, (float, int)):
+                LOG.debug('dom %s ns %s unit %s: '
+                          'skipping non-numeric metric %s',
+                          uuid, ns, unit, name)
+                continue
+
+            m = GaugeMetricFamily(
+                makemetricname(name),
+                'libvirt {}'.format(name),
+                labels=['uuid', 'unit']
+            )
+
+            m.add_metric([uuid, str(unit)], val)
+
+            yield m
+
     def generate_metrics(self, uuid):
-        for ns, metrics in self.metrics.items():
-            name_attr = '{}.name'.format(ns)
-            for i, metric in metrics.items():
-                labels = {
-                    'uuid': uuid,
-                    'unit': str(i),
-                }
-
-                if name_attr in metric:
-                    labels['name'] = metric[name_attr]
-
-                yield InfoMetricFamily(
-                    'libvirt_{}'.format(ns),
-                    'information about {ns} {unit}'.format(
-                        ns=ns,
-                        unit=labels['unit'],
-                    ),
-                    value=labels
-                )
-
-                for name, val in metric.items():
-                    if name == name_attr:
-                        continue
-
-                    if not isinstance(val, (float, int)):
-                        LOG.debug('dom %s ns %s unit %s: '
-                                  'skipping non-numeric metric %s',
-                                  uuid, ns, i, name)
-                        continue
-
-                    m = GaugeMetricFamily(
-                        makemetricname(name),
-                        'libvirt {}'.format(name),
-                        labels=['uuid', 'unit']
-                    )
-
-                    m.add_metric([uuid, str(i)], val)
-
-                    yield m
+        for ns, units in self.metrics.items():
+            for unit, stats in units.items():
+                yield from self.generate_unit_metrics(uuid, ns, unit, stats)
 
 
 class LibvirtCollector(object):
@@ -86,9 +88,6 @@ class LibvirtCollector(object):
         LOG.info('closing libvirt connection')
         conn.close()
 
-    def describe(self):
-        return []
-
     def add_domain_labels(self, dom):
         doc = etree.fromstring(dom.XMLDesc())
         labels = {}
@@ -101,6 +100,9 @@ class LibvirtCollector(object):
 
         return labels
 
+    def describe(self):
+        return []
+
     def collect(self):
         LOG.info('collecting metrics')
         with self.connection() as conn:
@@ -109,40 +111,43 @@ class LibvirtCollector(object):
             LOG.debug('found stats for %d domains', len(all_dom_stats))
 
             for dom, stats in all_dom_stats:
-                uuid = dom.UUIDString()
-                name = dom.name()
-                LOG.debug('collecting metrics for dom %s name %s', uuid, name)
+                yield from self.get_domain_metrics(dom, stats)
 
-                domlabels = {
-                    'uuid': uuid,
-                    'name': name,
-                }
+    def get_domain_metrics(self, dom, stats):
+        uuid = dom.UUIDString()
+        name = dom.name()
+        LOG.debug('collecting metrics for dom %s name %s', uuid, name)
 
-                if self.dom_label_map:
-                    domlabels.update(self.add_domain_labels(dom))
+        domlabels = {
+            'uuid': uuid,
+            'name': name,
+        }
 
-                yield InfoMetricFamily(
-                    'libvirt_active',
-                    'information about libvirt domain',
-                    value=domlabels,
-                )
+        if self.dom_label_map:
+            domlabels.update(self.add_domain_labels(dom))
 
-                bundle = BundledMetrics()
-                for name, val in stats.items():
-                    comps = name.split('.')
-                    if comps[1].isdigit():
-                        subkey = comps[2:]
-                        bundle.add(comps[0], comps[1], subkey, val)
-                        continue
+        yield InfoMetricFamily(
+            'libvirt_active',
+            'information about libvirt domain',
+            value=domlabels,
+        )
 
-                    m = GaugeMetricFamily(
-                        makemetricname(name),
-                        'libvirt {}'.format(name),
-                        labels=['uuid'],
-                    )
+        bundle = BundledMetrics()
+        for name, val in stats.items():
+            comps = name.split('.')
+            if comps[1].isdigit():
+                subkey = comps[2:]
+                bundle.add(comps[0], comps[1], subkey, val)
+                continue
 
-                    m.add_metric([uuid], val)
+            m = GaugeMetricFamily(
+                makemetricname(name),
+                'libvirt {}'.format(name),
+                labels=['uuid'],
+            )
 
-                    yield m
+            m.add_metric([uuid], val)
 
-                yield from bundle.generate_metrics(uuid)
+            yield m
+
+        yield from bundle.generate_metrics(uuid)
