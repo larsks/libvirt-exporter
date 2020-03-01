@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 @click.command()
 @click.option('-c', '--uri')
 @click.option('-l', '--listen', default='0.0.0.0')
-@click.option('-p', '--port', default=9191)
+@click.option('-p', '--port', default=5111)
 @click.option('-x', '--labels-from-xml', type=Path)
 @click.option('-v', '--verbose', count=True, default=0,
               type=click.IntRange(0, 2))
