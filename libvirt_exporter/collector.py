@@ -127,7 +127,7 @@ class LibvirtCollector(object):
             domlabels.update(self.add_domain_labels(dom))
 
         yield InfoMetricFamily(
-            'libvirt_active',
+            'libvirt_domain',
             'information about libvirt domain',
             value=domlabels,
         )

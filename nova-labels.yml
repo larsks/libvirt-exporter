@@ -1,5 +1,5 @@
 # Use this file to extract Nova metadata from the domain xml. The metadata
-# will be applied as labels as on the `libvirt_active` metric for each
+# will be applied as labels as on the `libvirt_domain` metric for each
 # domain.
 ---
 namespaces:
