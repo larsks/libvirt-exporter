@@ -34,7 +34,7 @@ class BundledMetrics(object):
         name_attr = '{}.name'.format(ns)
 
         labels = {
-            'uuid': uuid,
+            'dom_uuid': uuid,
             'unit': str(unit),
             'name': stats.get(name_attr, 'unit{}'.format(unit))
         }
@@ -61,7 +61,7 @@ class BundledMetrics(object):
             m = GaugeMetricFamily(
                 makemetricname(name),
                 'libvirt {}'.format(name),
-                labels=['uuid', 'unit']
+                labels=['dom_uuid', 'unit']
             )
 
             m.add_metric([uuid, str(unit)], val)
@@ -119,8 +119,8 @@ class LibvirtCollector(object):
         LOG.debug('collecting metrics for dom %s name %s', uuid, name)
 
         domlabels = {
-            'uuid': uuid,
-            'name': name,
+            'dom_uuid': uuid,
+            'dom_name': name,
         }
 
         if self.dom_label_map:
@@ -143,7 +143,7 @@ class LibvirtCollector(object):
             m = GaugeMetricFamily(
                 makemetricname(name),
                 'libvirt {}'.format(name),
-                labels=['uuid'],
+                labels=['dom_uuid'],
             )
 
             m.add_metric([uuid], val)
