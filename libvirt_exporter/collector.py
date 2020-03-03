@@ -53,13 +53,18 @@ class LibvirtCollector(object):
         self.conn.close()
 
     def get_labels_from_xml(self, dom):
+        dom_uuid = dom.UUIDString()
         doc = etree.fromstring(dom.XMLDesc())
         labels = {}
         for name, path in self.xml_label_map['labels'].items():
+            LOG.debug('evaluating path %s for domain %s',
+                      path, dom_uuid)
             val = doc.xpath(path,
                             namespaces=self.xml_label_map.get(
                                 'namespaces', {}))
             if len(val) > 0:
+                LOG.debug('adding label %s = %s to %s',
+                          name, val[0], dom_uuid)
                 labels[name] = val[0]
 
         return labels
@@ -78,20 +83,23 @@ class LibvirtCollector(object):
         with self.connection():
             domstats = self.read_all_domstats()
             for dom, metrics in domstats.items():
+                dom_uuid = dom.UUIDString()
+
                 labels = {
-                    'dom_uuid': dom.UUIDString(),
+                    'dom_uuid': dom_uuid,
                     'dom_name': dom.name(),
                 }
 
                 if self.xml_label_map:
                     labels.update(self.get_labels_from_xml(dom))
 
+                LOG.debug('labels for %s: %s',
+                          dom_uuid, labels)
                 up.add_metric(
                     [labels.get(x, '') for x in labelnames],
                     1.0
                 )
 
-                dom_uuid = dom.UUIDString()
                 flat = self.flatten(metrics,
                                     domlabels=dict(dom_uuid=dom_uuid))
 
