@@ -72,36 +72,37 @@ class LibvirtCollector(object):
     def collect(self):
         gauges = {}
 
-        labelnames = ['dom_uuid', 'dom_name']
+        domlabelnames = ['dom_uuid', 'dom_name']
         if self.xml_label_map:
-            labelnames.extend(self.xml_label_map['labels'].keys())
+            domlabelnames.extend(self.xml_label_map['labels'].keys())
 
         up = GaugeMetricFamily('libvirt_domain_up',
                                'Metadata about a libvirt domain',
-                               labels=labelnames)
+                               labels=domlabelnames)
 
         with self.connection():
             domstats = self.read_all_domstats()
             for dom, metrics in domstats.items():
                 dom_uuid = dom.UUIDString()
 
-                labels = {
+                domlabels = {
                     'dom_uuid': dom_uuid,
                     'dom_name': dom.name(),
                 }
 
                 if self.xml_label_map:
-                    labels.update(self.get_labels_from_xml(dom))
+                    domlabels.update(self.get_labels_from_xml(dom))
 
                 LOG.debug('labels for %s: %s',
-                          dom_uuid, labels)
+                          dom_uuid, domlabels)
+                assert domlabels['dom_name'] != ""
                 up.add_metric(
-                    [labels.get(x, '') for x in labelnames],
+                    [domlabels.get(x, '') for x in domlabelnames],
                     1.0
                 )
 
                 flat = self.flatten(metrics,
-                                    domlabels=dict(dom_uuid=dom_uuid))
+                                    extralabels=dict(dom_uuid=dom_uuid))
 
                 for name, labels, value in flat:
                     desc = self.description.get(
@@ -137,7 +138,7 @@ class LibvirtCollector(object):
 
         return metrics
 
-    def flatten(self, cur, prefix=None, unit=None, domlabels=None, **labels):
+    def flatten(self, cur, prefix=None, unit=None, extralabels=None, **labels):
         if prefix is None:
             prefix = []
         if unit is None:
@@ -150,23 +151,23 @@ class LibvirtCollector(object):
                 if k == 'name':
                     top.extend(
                         self.flatten(1.0, prefix=prefix + ['info'], unit=unit,
-                                     domlabels=domlabels, name=v, **labels)
+                                     extralabels=extralabels, name=v, **labels)
                     )
                 elif k.isdigit():
                     top.extend(
                         self.flatten(cur[k], prefix=prefix, unit=unit + [k],
-                                     domlabels=domlabels, **labels)
+                                     extralabels=extralabels, **labels)
                     )
                 else:
                     top.extend(
                         self.flatten(cur[k], prefix=prefix + [k], unit=unit,
-                                     domlabels=domlabels, **labels)
+                                     extralabels=extralabels, **labels)
                     )
 
             return top
         else:
-            if domlabels:
-                labels.update(domlabels)
+            if extralabels:
+                labels.update(extralabels)
             if unit:
                 labels['unit'] = '.'.join(unit)
 
