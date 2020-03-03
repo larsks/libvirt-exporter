@@ -4,7 +4,6 @@
 ---
 namespaces:
     nova: 'http://openstack.org/xmlns/libvirt/nova/1.0'
-    libosinfo: 'http://libosinfo.org/xmlns/libvirt/domain/1.0'
 
 labels:
     nova_server_name: '/domain/metadata/nova:instance/nova:name/text()'

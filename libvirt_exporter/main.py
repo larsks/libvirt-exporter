@@ -26,13 +26,13 @@ def main(verbose, uri, listen, port, labels_from_xml):
 
     if labels_from_xml:
         with labels_from_xml.open('r') as fd:
-            dom_label_map = yaml.safe_load(fd)
+            xml_label_map = yaml.safe_load(fd)
     else:
-        dom_label_map = None
+        xml_label_map = None
 
     REGISTRY.register(LibvirtCollector(
         uri=uri,
-        dom_label_map=dom_label_map,
+        xml_label_map=xml_label_map,
     ))
 
     LOG.info('starting server on %s port %d', listen, port)

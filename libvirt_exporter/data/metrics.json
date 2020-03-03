@@ -1,0 +1,350 @@
+[
+  {
+    "name": "state_state",
+    "desc": "state of the VM, returned as number from virDomainState enum"
+  },
+  {
+    "name": "state_reason",
+    "desc": "reason for entering given state, returned as int from virDomain*Reason enum corresponding to given state"
+  },
+  {
+    "name": "cpu_time",
+    "desc": "total cpu time spent for this domain in nanoseconds"
+  },
+  {
+    "name": "cpu_user",
+    "desc": "user cpu time spent in nanoseconds"
+  },
+  {
+    "name": "cpu_system",
+    "desc": "system cpu time spent in nanoseconds"
+  },
+  {
+    "name": "cpu_cache_monitor_count",
+    "desc": "the number of cache monitors for this domain"
+  },
+  {
+    "name": "cpu_cache_monitor_name",
+    "desc": "the name of cache monitor <num>"
+  },
+  {
+    "name": "cpu_cache_monitor_vcpus",
+    "desc": "vcpu list of cache monitor <num>"
+  },
+  {
+    "name": "cpu_cache_monitor_bank_count",
+    "desc": "the number of cache banks in cache monitor <num>"
+  },
+  {
+    "name": "cpu_cache_monitor_bank_id",
+    "desc": "host allocated cache id for bank <index> in cache monitor <num>"
+  },
+  {
+    "name": "cpu_cache_monitor_bank_bytes",
+    "desc": "the number of bytes of last level cache that the domain is using on cache bank <index>"
+  },
+  {
+    "name": "balloon_current",
+    "desc": "the memory in KiB currently used"
+  },
+  {
+    "name": "balloon_maximum",
+    "desc": "the maximum memory in KiB allowed"
+  },
+  {
+    "name": "balloon_swap_in",
+    "desc": "the amount of data read from swap space (in KiB)"
+  },
+  {
+    "name": "balloon_swap_out",
+    "desc": "the amount of memory written out to swap space (in KiB)"
+  },
+  {
+    "name": "balloon_major_fault",
+    "desc": "the number of page faults then disk IO was required"
+  },
+  {
+    "name": "balloon_minor_fault",
+    "desc": "the number of other page faults"
+  },
+  {
+    "name": "balloon_unused",
+    "desc": "the amount of memory left unused by the system (in KiB)"
+  },
+  {
+    "name": "balloon_available",
+    "desc": "the amount of usable memory as seen by the domain (in KiB)"
+  },
+  {
+    "name": "balloon_rss",
+    "desc": "Resident Set Size of running domain's process (in KiB)"
+  },
+  {
+    "name": "balloon_usable",
+    "desc": "the amount of memory which can be reclaimed by balloon without causing host swapping (in KiB)"
+  },
+  {
+    "name": "balloon_last_update",
+    "desc": "timestamp of the last update of statistics (in seconds)"
+  },
+  {
+    "name": "balloon_disk_caches",
+    "desc": "the amount of memory that can be reclaimed without additional I/O, typically disk (in KiB)"
+  },
+  {
+    "name": "vcpu_current",
+    "desc": "current number of online virtual CPUs"
+  },
+  {
+    "name": "vcpu_maximum",
+    "desc": "maximum number of online virtual CPUs"
+  },
+  {
+    "name": "vcpu_state",
+    "desc": "state of the virtual CPU <num>, as number from virVcpuState enum"
+  },
+  {
+    "name": "vcpu_time",
+    "desc": "virtual cpu time spent by virtual CPU <num> (in microseconds)"
+  },
+  {
+    "name": "vcpu_wait",
+    "desc": "virtual cpu time spent by virtual CPU <num> waiting on I/O (in microseconds)"
+  },
+  {
+    "name": "vcpu_halted",
+    "desc": "virtual CPU <num> is halted: yes or no (may indicate the processor is idle or even disabled, depending on the architecture)"
+  },
+  {
+    "name": "net_count",
+    "desc": "number of network interfaces on this domain"
+  },
+  {
+    "name": "net_name",
+    "desc": "name of the interface <num>"
+  },
+  {
+    "name": "net_rx_bytes",
+    "desc": "number of bytes received"
+  },
+  {
+    "name": "net_rx_pkts",
+    "desc": "number of packets received"
+  },
+  {
+    "name": "net_rx_errs",
+    "desc": "number of receive errors"
+  },
+  {
+    "name": "net_rx_drop",
+    "desc": "number of receive packets dropped"
+  },
+  {
+    "name": "net_tx_bytes",
+    "desc": "number of bytes transmitted"
+  },
+  {
+    "name": "net_tx_pkts",
+    "desc": "number of packets transmitted"
+  },
+  {
+    "name": "net_tx_errs",
+    "desc": "number of transmission errors"
+  },
+  {
+    "name": "net_tx_drop",
+    "desc": "number of transmit packets dropped"
+  },
+  {
+    "name": "perf_cmt",
+    "desc": "the cache usage in Byte currently used"
+  },
+  {
+    "name": "perf_mbmt",
+    "desc": "total system bandwidth from one level of cache"
+  },
+  {
+    "name": "perf_mbml",
+    "desc": "bandwidth of memory traffic for a memory controller"
+  },
+  {
+    "name": "perf_cpu_cycles",
+    "desc": "the count of cpu cycles (total/elapsed)"
+  },
+  {
+    "name": "perf_instructions",
+    "desc": "the count of instructions"
+  },
+  {
+    "name": "perf_cache_references",
+    "desc": "the count of cache hits"
+  },
+  {
+    "name": "perf_cache_misses",
+    "desc": "the count of caches misses"
+  },
+  {
+    "name": "perf_branch_instructions",
+    "desc": "the count of branch instructions"
+  },
+  {
+    "name": "perf_branch_misses",
+    "desc": "the count of branch misses"
+  },
+  {
+    "name": "perf_bus_cycles",
+    "desc": "the count of bus cycles"
+  },
+  {
+    "name": "perf_stalled_cycles_frontend",
+    "desc": "the count of stalled frontend cpu cycles"
+  },
+  {
+    "name": "perf_stalled_cycles_backend",
+    "desc": "the count of stalled backend cpu cycles"
+  },
+  {
+    "name": "perf_ref_cpu_cycles",
+    "desc": "the count of ref cpu cycles"
+  },
+  {
+    "name": "perf_cpu_clock",
+    "desc": "the count of cpu clock time"
+  },
+  {
+    "name": "perf_task_clock",
+    "desc": "the count of task clock time"
+  },
+  {
+    "name": "perf_page_faults",
+    "desc": "the count of page faults"
+  },
+  {
+    "name": "perf_context_switches",
+    "desc": "the count of context switches"
+  },
+  {
+    "name": "perf_cpu_migrations",
+    "desc": "the count of cpu migrations"
+  },
+  {
+    "name": "perf_page_faults_min",
+    "desc": "the count of minor page faults"
+  },
+  {
+    "name": "perf_page_faults_maj",
+    "desc": "the count of major page faults"
+  },
+  {
+    "name": "perf_alignment_faults",
+    "desc": "the count of alignment faults"
+  },
+  {
+    "name": "perf_emulation_faults",
+    "desc": "the count of emulation faults"
+  },
+  {
+    "name": "block_count",
+    "desc": "number of block devices being listed"
+  },
+  {
+    "name": "block_name",
+    "desc": "name of the target of the block device <num> (the same name for multiple entries if *--backing* is present)"
+  },
+  {
+    "name": "block_backingIndex",
+    "desc": "when *--backing* is present, matches up with the <backingStore> index listed in domain XML for backing files"
+  },
+  {
+    "name": "block_path",
+    "desc": "file source of block device <num>, if it is a local file or block device"
+  },
+  {
+    "name": "block_rd_reqs",
+    "desc": "number of read requests"
+  },
+  {
+    "name": "block_rd_bytes",
+    "desc": "number of read bytes"
+  },
+  {
+    "name": "block_rd_times",
+    "desc": "total time (ns) spent on reads"
+  },
+  {
+    "name": "block_wr_reqs",
+    "desc": "number of write requests"
+  },
+  {
+    "name": "block_wr_bytes",
+    "desc": "number of written bytes"
+  },
+  {
+    "name": "block_wr_times",
+    "desc": "total time (ns) spent on writes"
+  },
+  {
+    "name": "block_fl_reqs",
+    "desc": "total flush requests"
+  },
+  {
+    "name": "block_fl_times",
+    "desc": "total time (ns) spent on cache flushing"
+  },
+  {
+    "name": "block_errors",
+    "desc": "Xen only: the 'oo_req' value"
+  },
+  {
+    "name": "block_allocation",
+    "desc": "offset of highest written sector in bytes"
+  },
+  {
+    "name": "block_capacity",
+    "desc": "logical size of source file in bytes"
+  },
+  {
+    "name": "block_physical",
+    "desc": "physical size of source file in bytes"
+  },
+  {
+    "name": "block_threshold",
+    "desc": "threshold (in bytes) for delivering the VIR_DOMAIN_EVENT_ID_BLOCK_THRESHOLD event. See domblkthreshold."
+  },
+  {
+    "name": "iothread_poll_max_ns",
+    "desc": "maximum polling time in nanoseconds used by the <id> IOThread. A value of 0 (zero) indicates polling is disabled."
+  },
+  {
+    "name": "iothread_poll_grow",
+    "desc": "polling time grow value. A value of 0 (zero) growth is managed by the hypervisor."
+  },
+  {
+    "name": "iothread_poll_shrink",
+    "desc": "polling time shrink value. A value of (zero) indicates shrink is managed by hypervisor."
+  },
+  {
+    "name": "memory_bandwidth_monitor_count",
+    "desc": "the number of memory bandwidth monitors for this domain"
+  },
+  {
+    "name": "memory_bandwidth_monitor_vcpus",
+    "desc": "the vcpu list of monitor <num>"
+  },
+  {
+    "name": "memory_bandwidth_monitor_node_count",
+    "desc": "the number of memory controller in monitor <num>"
+  },
+  {
+    "name": "memory_bandwidth_monitor_node_id",
+    "desc": "host allocated memory controller id for controller <index> of monitor <num>"
+  },
+  {
+    "name": "memory_bandwidth_monitor_node_bytes_local",
+    "desc": "the accumulative bytes consumed by @vcpus that passing through the memory controller in the same processor that the scheduled host CPU belongs to."
+  },
+  {
+    "name": "memory_bandwidth_monitor_node_bytes_total",
+    "desc": "the total bytes consumed by @vcpus that passing through all memory controllers, either local or remote controller."
+  }
+]

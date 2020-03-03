@@ -1,17 +1,15 @@
-import collections
 import contextlib
+import json
 import libvirt
 import logging
+import pkg_resources
 import re
 
 from lxml import etree
-
-from prometheus_client.core import (
-    GaugeMetricFamily,
-    InfoMetricFamily,
-)
+from prometheus_client.core import GaugeMetricFamily
 
 LOG = logging.getLogger(__name__)
+
 re_invalid_chars = re.compile(r'[^\w]+')
 
 
@@ -20,134 +18,153 @@ def makemetricname(name):
     return 'libvirt_{}'.format(name)
 
 
-class BundledMetrics(object):
-    def __init__(self):
-        self.metrics = collections.defaultdict(
-            lambda: collections.defaultdict(
-                dict))
-
-    def add(self, ns, index, subkey, val):
-        name = '.'.join([ns] + subkey)
-        self.metrics[ns][index][name] = val
-
-    def generate_unit_metrics(self, uuid, ns, unit, stats):
-        name_attr = '{}.name'.format(ns)
-
-        labels = {
-            'dom_uuid': uuid,
-            'unit': str(unit),
-            'name': stats.get(name_attr, 'unit{}'.format(unit))
-        }
-
-        yield InfoMetricFamily(
-            'libvirt_{}'.format(ns),
-            'information about {ns} {unit}'.format(
-                ns=ns,
-                unit=labels['unit'],
-            ),
-            value=labels
-        )
-
-        for name, val in stats.items():
-            if name == name_attr:
-                continue
-
-            if not isinstance(val, (float, int)):
-                LOG.debug('dom %s ns %s unit %s: '
-                          'skipping non-numeric metric %s',
-                          uuid, ns, unit, name)
-                continue
-
-            m = GaugeMetricFamily(
-                makemetricname(name),
-                'libvirt {}'.format(name),
-                labels=['dom_uuid', 'unit']
-            )
-
-            m.add_metric([uuid, str(unit)], val)
-
-            yield m
-
-    def generate_metrics(self, uuid):
-        for ns, units in self.metrics.items():
-            for unit, stats in units.items():
-                yield from self.generate_unit_metrics(uuid, ns, unit, stats)
+class Tree(dict):
+    def __missing__(self, key):
+        value = self[key] = type(self)()
+        return value
 
 
 class LibvirtCollector(object):
-    def __init__(self, uri=None, dom_label_map=None):
+    def __init__(self, uri=None, xml_label_map=None):
         self.uri = uri
-        self.dom_label_map = dom_label_map
+        self.xml_label_map = xml_label_map
+        self.read_metric_descriptions()
+
+    def read_metric_descriptions(self):
+        self.description = {}
+        s = pkg_resources.resource_stream(
+            'libvirt_exporter', 'data/metrics.json')
+        with contextlib.closing(s):
+            descriptions = json.load(s)
+            for desc in descriptions:
+                self.description['libvirt_{}'.format(desc['name'])] = (
+                    desc['desc']
+                )
+        LOG.debug('found %d metric descriptions',
+                  len(self.description))
 
     @contextlib.contextmanager
     def connection(self):
-        LOG.info('connecting to libvirt at uri %s',
+        LOG.info('connecting to libvirt @ %s',
                  self.uri if self.uri else '<default>')
-        conn = libvirt.open(self.uri)
-        yield conn
-        LOG.info('closing libvirt connection')
-        conn.close()
+        self.conn = libvirt.open(self.uri)
+        yield self.conn
+        LOG.info('closing connection to libvirt')
+        self.conn.close()
 
-    def add_domain_labels(self, dom):
+    def get_labels_from_xml(self, dom):
         doc = etree.fromstring(dom.XMLDesc())
         labels = {}
-        for name, path in self.dom_label_map['labels'].items():
+        for name, path in self.xml_label_map['labels'].items():
             val = doc.xpath(path,
-                            namespaces=self.dom_label_map.get(
+                            namespaces=self.xml_label_map.get(
                                 'namespaces', {}))
             if len(val) > 0:
                 labels[name] = val[0]
 
         return labels
 
-    def describe(self):
-        return []
-
     def collect(self):
-        LOG.info('collecting metrics')
-        with self.connection() as conn:
-            all_dom_stats = conn.getAllDomainStats(
-                0, libvirt.VIR_CONNECT_GET_ALL_DOMAINS_STATS_ACTIVE)
-            LOG.debug('found stats for %d domains', len(all_dom_stats))
+        gauges = {}
 
-            for dom, stats in all_dom_stats:
-                yield from self.get_domain_metrics(dom, stats)
+        labelnames = ['dom_uuid', 'dom_name']
+        if self.xml_label_map:
+            labelnames.extend(self.xml_label_map['labels'].keys())
 
-    def get_domain_metrics(self, dom, stats):
-        uuid = dom.UUIDString()
-        name = dom.name()
-        LOG.debug('collecting metrics for dom %s name %s', uuid, name)
+        up = GaugeMetricFamily('libvirt_domain_up',
+                               'Metadata about a libvirt domain',
+                               labels=labelnames)
 
-        domlabels = {
-            'dom_uuid': uuid,
-            'dom_name': name,
-        }
+        with self.connection():
+            domstats = self.read_all_domstats()
+            for dom, metrics in domstats.items():
+                labels = {
+                    'dom_uuid': dom.UUIDString(),
+                    'dom_name': dom.name(),
+                }
 
-        if self.dom_label_map:
-            domlabels.update(self.add_domain_labels(dom))
+                if self.xml_label_map:
+                    labels.update(self.get_labels_from_xml(dom))
 
-        yield InfoMetricFamily(
-            'libvirt_domain',
-            'information about libvirt domain',
-            value=domlabels,
-        )
+                up.add_metric(
+                    [labels.get(x, '') for x in labelnames],
+                    1.0
+                )
 
-        bundle = BundledMetrics()
-        for name, val in stats.items():
-            comps = name.split('.')
-            if comps[1].isdigit():
-                subkey = comps[2:]
-                bundle.add(comps[0], comps[1], subkey, val)
-                continue
+                dom_uuid = dom.UUIDString()
+                flat = self.flatten(metrics,
+                                    domlabels=dict(dom_uuid=dom_uuid))
 
-            m = GaugeMetricFamily(
-                makemetricname(name),
-                'libvirt {}'.format(name),
-                labels=['dom_uuid'],
-            )
+                for name, labels, value in flat:
+                    desc = self.description.get(
+                        name, 'No documentation for {}'.format(name))
+                    labelnames = labels.keys()
+                    m = gauges.setdefault(
+                        name, GaugeMetricFamily(name, desc,
+                                                labels=labelnames))
 
-            m.add_metric([uuid], val)
+                    m.add_metric(
+                        labels.values(), value)
 
-            yield m
+        yield up
+        yield from iter(gauges.values())
 
-        yield from bundle.generate_metrics(uuid)
+    def read_all_domstats(self):
+        metrics = Tree()
+        for dom, stats in self.conn.getAllDomainStats(
+                0, libvirt.VIR_CONNECT_GET_ALL_DOMAINS_STATS_ACTIVE):
+            for name, val in stats.items():
+                if not isinstance(val, (int, float)):
+                    continue
+
+                comps = name.split('.')
+                cur = metrics[dom]
+                last = None
+                for comp in comps:
+                    if last:
+                        cur = cur[last]
+                    last = comp
+
+                cur[last] = val
+
+        return metrics
+
+    def flatten(self, cur, prefix=None, unit=None, domlabels=None, **labels):
+        if prefix is None:
+            prefix = []
+        if unit is None:
+            unit = []
+
+        top = []
+
+        if isinstance(cur, dict):
+            for k, v in cur.items():
+                if k == 'name':
+                    top.extend(
+                        self.flatten(1.0, prefix=prefix + ['info'], unit=unit,
+                                     domlabels=domlabels, name=v, **labels)
+                    )
+                elif k.isdigit():
+                    top.extend(
+                        self.flatten(cur[k], prefix=prefix, unit=unit + [k],
+                                     domlabels=domlabels, **labels)
+                    )
+                else:
+                    top.extend(
+                        self.flatten(cur[k], prefix=prefix + [k], unit=unit,
+                                     domlabels=domlabels, **labels)
+                    )
+
+            return top
+        else:
+            if domlabels:
+                labels.update(domlabels)
+            if unit:
+                labels['unit'] = '.'.join(unit)
+
+            return [(makemetricname('_'.join(prefix)), labels, cur)]
+
+
+if __name__ == '__main__':
+    lv = LibvirtCollector()
+    res = lv.collect()
